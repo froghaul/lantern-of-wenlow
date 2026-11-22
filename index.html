@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>The Lantern of Wenlow</title>
+<meta name="description" content="An original old-school quest adventure. Relight the Lantern of Dawn and wake the sleeping King.">
+<meta name="theme-color" content="#1b1410">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <span id="title">The Lantern of Wenlow</span>
+    <span id="stats"><span title="Silver pennies">🪙 <b id="coins">0</b></span><span title="Score">★ <b id="score">0</b></span></span>
+    <button id="menuBtn" aria-label="Menu">☰</button>
+  </header>
+  <div id="stage"><div id="scene"></div><div id="sceneName"></div></div>
+  <div id="text"></div>
+  <div id="inv"></div>
+</div>
+<div id="overlay" hidden></div>
+<script src="art.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
