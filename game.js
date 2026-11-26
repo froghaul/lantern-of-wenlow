@@ -382,9 +382,20 @@ function ending() {
   S.f.ending = 1; S.scene = 'hall'; save(); render();
   const pct = S.score / MAX_SCORE;
   const rank = pct >= 1 ? 'Paragon of Wenlow' : pct >= .85 ? 'Knight of the Dawn' : pct >= .65 ? 'Trusted Knight' : 'Squire with promise';
-  overlay(`<div class="who">Dawn</div><div class="say">Light pours from the Grey Tower across the whole realm. Birds begin to sing. In the Great Hall, King Aldren opens his eyes, sits up, and asks why everyone is crying.<br><br>Maud laughs through her tears. "Because, Your Majesty, a knight of Wenlow brought back the dawn."<br><br><b>Score: ${S.score} of ${MAX_SCORE}</b><br>Title earned: <b>${rank}</b>${S.score < MAX_SCORE ? '<br><small>Some deeds went undone. Mercy and gentleness earn the most honour.</small>' : ''}</div><div class="opts"><button id="again">Play again</button><button id="stay">Admire the hall</button></div>`);
+  overlay(`<div class="who">Dawn</div><div class="say">Light pours from the Grey Tower across the whole realm. Birds begin to sing. In the Great Hall, King Aldren opens his eyes, sits up, and asks why everyone is crying.<br><br>Maud laughs through her tears. "Because, Your Majesty, a knight of Wenlow brought back the dawn."<br><br><b>Score: ${S.score} of ${MAX_SCORE}</b><br>Title earned: <b>${rank}</b>${S.score < MAX_SCORE ? '<br><small>Some deeds went undone. Mercy and gentleness earn the most honour.</small>' : ''}</div><div class="opts"><button id="next">Continue…</button></div>`);
+  $('next').onclick = () => overlay(`<div class="who">Chapter One complete</div><div class="say">That evening, far up the mountain, Brother Ivo stands at the mouth of his cave and stares north, where a thin grey line smudges the horizon.<br><br>"The Warden was only a shadow," he murmurs. "Something cast it. And it is still out there."<br><br><i>The Wenlow Chronicles continue in <b>Chapter Two: The Northern Shadow</b>.</i></div><div class="opts"><button id="share">📣 Share with a friend</button><button id="again">Play again</button><button id="stay">Admire the hall</button></div>`) && bindEnd();
+}
+function bindEnd() {
+  $('share').onclick = () => shareGame(true);
   $('again').onclick = () => { closeOverlay(); S = newState(); start(); };
   $('stay').onclick = () => { closeOverlay(); say('King Aldren is awake, and the hall is full of light. Well done, Sir Knight.'); };
+}
+function shareGame(won) {
+  const url = location.href.split(/[?#]/)[0];
+  const text = won ? `I relit the Lantern of Dawn and scored ${S.score}/${MAX_SCORE} in The Lantern of Wenlow. Free to play on your phone:` : 'The Lantern of Wenlow: a free old-school quest adventure you can play on your phone:';
+  if (navigator.share) navigator.share({ title: 'The Lantern of Wenlow', text, url }).catch(() => { });
+  else if (navigator.clipboard) navigator.clipboard.writeText(`${text} ${url}`).then(() => say('Link copied. Paste it to a friend!'), () => say(url));
+  else say(`Share this link: ${url}`);
 }
 
 // ---------- Rendering ----------
@@ -392,8 +403,10 @@ function sceneHot() { return SCENES[S.scene].hot.filter(h => !h.when || h.when()
 function render() {
   const sc = SCENES[S.scene];
   const hs = sceneHot().map((h, i) => `<rect class="hs${h.exit ? ' exit' : ''}" data-i="${i}" x="${h.box[0]}" y="${h.box[1]}" width="${h.box[2]}" height="${h.box[3]}" rx="6"/>`).join('');
-  $('scene').innerHTML = `<svg viewBox="0 0 400 250" preserveAspectRatio="xMidYMid slice">${ART[S.scene](S.f)}${hs}</svg>`;
+  $('scene').innerHTML = `<svg viewBox="0 0 400 250" preserveAspectRatio="xMidYMid slice">${ART[S.scene](S.f)}<g id="knight"></g>${hs}</svg>`;
   $('sceneName').textContent = sc.name;
+  if (K.scene !== S.scene) { placeKnight(K.scene); K.scene = S.scene; }
+  drawKnight();
   refresh();
 }
 function refresh() {
@@ -409,8 +422,12 @@ function refresh() {
 function val(v) { return typeof v === 'function' ? v() : v; }
 function tapHot(h) {
   sfx('tap');
-  if (S.sel) {
-    const it = S.sel; S.sel = null;
+  const it = S.sel;
+  walkTo(standFor(h), () => { faceToward(h); actOn(h, it); });
+}
+function actOn(h, it) {
+  if (it) {
+    S.sel = null;
     const fn = h.use && h.use[it];
     if (fn) fn(); else say(`Using the ${ITEMS[it].name.toLowerCase()} on ${h.name.toLowerCase()} doesn't help.`);
     refresh(); save(); return;
@@ -433,27 +450,36 @@ function menu() {
     <button id="m-hints">${document.body.classList.contains('showhs') ? 'Hide' : 'Show'} tappable spots</button>
     <button id="m-sound">Sound: ${soundOn ? 'on' : 'off'}</button>
     <button id="m-help">How to play</button>
+    <button id="m-share">Share the game with a friend</button>
     <button id="m-new">Start a new game</button>
     <button id="m-about">About</button></div><button class="cancel">Close</button>`);
   o.querySelector('.cancel').onclick = closeOverlay;
   $('m-hints').onclick = () => { document.body.classList.toggle('showhs'); localStorage.setItem('wenlow-hs', document.body.classList.contains('showhs') ? '1' : '0'); closeOverlay(); };
   $('m-sound').onclick = () => { soundOn = !soundOn; localStorage.setItem('wenlow-sound', soundOn ? 'on' : 'off'); closeOverlay(); };
   $('m-help').onclick = help;
+  $('m-share').onclick = () => { closeOverlay(); shareGame(); };
   $('m-new').onclick = () => choose('Start over from the beginning? Your current progress will be lost.', [['Yes, start over', () => { S = newState(); start(); }], ['No', null]]);
-  $('m-about').onclick = () => talk('About', '<b>The Lantern of Wenlow</b><br>An original adventure in the spirit of old-school quest games. Everything you see (story, characters, art and sound) was made new for this game.<br><br>Your progress saves automatically on this device.');
+  $('m-about').onclick = () => talk('About', '<b>The Lantern of Wenlow</b><br>Chapter One of <i>The Wenlow Chronicles</i>.<br>An original adventure in the spirit of old-school quest games. Everything you see (story, characters, art and sound) was made new for this game.<br><br>Your progress saves automatically on this device.');
 }
 function help() {
-  talk('How to play', '• <b>Tap</b> people and things in the picture to look, talk or take.<br>• <b>Glowing edges</b> lead to other places.<br>• <b>Tap an item</b> in your pack, then tap something in the scene to use it there.<br>• <b>In a fight</b>, watch the red arrows: guard HIGH or LOW, then STRIKE while they\'re off balance.<br>• Turn your phone <b>sideways</b> for a bigger picture.<br>• Stuck? Turn on "Show tappable spots" in the ☰ menu.<br><br>Your game saves itself automatically.');
+  talk('How to play', '• <b>Tap the ground</b> to walk your knight there.<br>• <b>Tap</b> people and things and your knight walks over to look, talk or take.<br>• <b>Dashed edges</b> are ways out to other places.<br>• <b>Tap an item</b> in your pack, then tap something in the scene to use it there.<br>• <b>In a fight</b>, watch the red arrows: guard HIGH or LOW, then STRIKE while they\'re off balance.<br>• Turn your phone <b>sideways</b> for a bigger picture.<br>• Stuck? Turn on "Show tappable spots" in the ☰ menu.<br><br>Your game saves itself automatically.');
 }
 
-function start() { closeOverlay(); render(); enterText(); save(); if (!S.f.seenIntro) { S.f.seenIntro = 1; intro(); } }
+function start() { K.scene = null; closeOverlay(); render(); enterText(); save(); if (!S.f.seenIntro) { S.f.seenIntro = 1; intro(); } }
 function intro() {
-  talk('The Lantern of Wenlow', 'For a hundred years the <b>Lantern of Dawn</b> has burned atop the Grey Tower, and while it burned, the realm of Wenlow knew good harvests, gentle winters and a wise king.<br><br>Then, on Midsummer night, it went dark, and King Aldren fell into a sleep from which no one can wake him.<br><br>You are a young knight of Wenlow, summoned to the Great Hall at dawn…', help);
+  talk('The Lantern of Wenlow', 'For a hundred years the <b>Lantern of Dawn</b> has burned atop the Grey Tower, and while it burned, the realm of Wenlow knew good harvests, gentle winters and a wise king.<br><br>Then, on Midsummer night, it went dark, and King Aldren fell into a sleep from which no one can wake him.<br><br>You are a young knight of Wenlow, summoned to the Great Hall at dawn…<br><br><i>The Wenlow Chronicles, Chapter One</i>', help);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('wenlow-hs') === '1') document.body.classList.add('showhs');
-  $('scene').addEventListener('click', (e) => { const t = e.target.closest('.hs'); if (!t) return; const h = sceneHot()[+t.dataset.i]; if (h) tapHot(h); });
+  $('scene').addEventListener('click', (e) => {
+    const t = e.target.closest('.hs');
+    if (t) { const h = sceneHot()[+t.dataset.i]; if (h) tapHot(h); return; }
+    const svg = $('scene').querySelector('svg'); if (!svg) return;
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const q = pt.matrixTransform(svg.getScreenCTM().inverse());
+    walkTo([q.x, q.y]);
+  });
   $('menuBtn').onclick = menu;
   S = load() || newState();
   if (S.f.ending) { S = newState(); }
