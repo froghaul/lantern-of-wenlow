@@ -1,0 +1,52 @@
+<html><head><link rel=stylesheet href="../style.css"></head><body>
+<div id="app"><header><span id="title"></span><span id="stats"><b id="coins"></b><b id="score"></b></span><button id="menuBtn"></button></header><div id="stage"><div id="scene"></div><div id="sceneName"></div></div><div id="text"></div><div id="inv"></div></div><div id="overlay" hidden></div>
+<pre id=log></pre>
+<script>localStorage.clear();window.requestAnimationFrame=cb=>setTimeout(()=>cb(performance.now()),16);window.cancelAnimationFrame=id=>clearTimeout(id);</script>
+<script src="../art.js"></script><script src="../knight.js"></script><script src="../game.js"></script>
+<script>
+const L=[];const log=m=>{L.push(m);document.getElementById('log').textContent=L.join('\n')};window.addEventListener('error',e=>log('JSERR '+e.message));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function btn(t){const b=[...document.querySelectorAll('#overlay button')].find(b=>b.textContent.includes(t));if(!b)throw new Error('no button '+t+' | '+document.getElementById('overlay').innerText.slice(0,200));b.click();}
+async function cont(){while(!document.getElementById('overlay').hidden&&[...document.querySelectorAll('#overlay button')].some(b=>b.textContent==='Continue')){btn('Continue');await sleep(10);}}
+function HS(n){const h=sceneHot().find(h=>h.name.startsWith(n));if(!h)throw new Error('no hotspot '+n+' in '+S.scene);return h}
+async function walked(){let i=0;await sleep(5);while(K.moving||K.path.length){if(++i>600)throw new Error('knight stuck at '+K.x.toFixed(0)+','+K.y.toFixed(0));await sleep(20);}await sleep(10);}
+let lastScene='';function arrive(){if(S.scene!==lastScene){log('  arrived '+S.scene+' knight at '+K.x.toFixed(0)+','+K.y.toFixed(0)+(walkable(K.x,K.y,WALK[S.scene])?'':' OFF-GROUND'));lastScene=S.scene;}}
+async function tap(n,act){S.sel=null;tapHot(HS(n));await walked();arrive();if(act)btn(act);await sleep(10);}
+async function use(it,n){if(!has(it))throw new Error('missing '+it);S.sel=it;tapHot(HS(n));await walked();arrive();}
+async function autofight(){while(!F)await sleep(20);while(F){if(F.phase==='tele'&&F.guard!==F.atk)setGuard(F.atk);if(F.phase==='open')strike();await sleep(30);}await sleep(50);}
+(async()=>{try{
+ await sleep(50);await cont();
+ log('start '+S.scene);walkTo([5,5]);await walked();log('ground tap clamp -> '+K.x.toFixed(0)+','+K.y.toFixed(0));await tap('Door');await cont();log('blocked at door: '+S.scene);
+ await tap('Maud','Talk');await cont();
+ await tap('Shield','Take');
+ await tap('Door');log('-> '+S.scene);
+ await tap('Brannoc','Talk');btn('Buy rope');await cont();
+ await tap('Main gate');await tap('Ashby');
+ await tap('Fountain','Take');
+ await tap('The Bent','');log('scene '+S.scene);
+ await tap('Hild','Talk');btn('Buy bread');await cont();
+ await tap('Hild','Talk');btn('Buy a flask');await cont();
+ await tap('Door');await use('bread','Odo');await cont();
+ await tap('Road back');await tap('The Darkwood');
+ await use('rue','Grey wolf');
+ await tap('Path deeper');log('scene '+S.scene);
+ await use('flask','The Moon Pool');log('flask early: '+document.getElementById('text').innerText.slice(0,60));
+ await tap('The Moon Pool','Call');await cont();btn('Footsteps');await cont();
+ await use('rope','The Moon Pool');await use('flask','The Moon Pool');log('oil='+has('oil'));
+ await tap('Path back');await tap('Path back');await tap('Road to the ford');
+ await tap('Reeds','Take');
+ await tap('Wat','Talk');btn('Pay');await cont();log('scene '+S.scene);
+ await use('spindle','Nan');await cont();log('wick='+has('wick'));
+ await tap('Boat back');await tap('Road back');await tap('Crag');
+ await tap('Masked','Talk');btn('Draw');await autofight();btn('Spare');await cont();log('bandit='+S.f.bandit+' coins='+S.coins);
+ await tap('Cave mouth');await tap('Brother','Talk');await cont();btn('To win glory');await cont();
+ await tap('Brother','Talk');await cont();btn('To protect');await cont();log('flint='+has('flint'));
+ await tap('Cave mouth');await tap('Path back');await tap('The Grey Tower');log('scene '+S.scene);
+ await tap('The Grey Warden','Talk');btn('Fight');await autofight();log('warden='+S.f.warden);
+ await tap('Tower door');await use('flint','Lantern');log('early flint: '+document.getElementById('text').innerText.slice(0,50));
+ await use('oil','Lantern');await use('wick','Lantern');await use('flint','Lantern');
+ await sleep(2500);log('ending overlay: '+document.getElementById('overlay').innerText.slice(0,120));btn('Continue');await sleep(20);log('teaser: '+document.getElementById('overlay').innerText.slice(0,300));
+ log('SCORE '+S.score+'/'+MAX_SCORE+' coins left '+S.coins);
+}catch(e){log('ERROR '+e.message+' @'+S.scene)}document.getElementById('log').textContent=L.join('\n');document.title='DONE';})();
+window.onerror=(m)=>L.push('JSERR '+m);
+</script></body></html>
